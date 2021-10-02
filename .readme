@@ -1,0 +1,11 @@
+this repo contains three main contracts in ./contract
+
+NFT.sol = this is the core nft erc721 contract where admin can mint the nfts with a unique token id and tokenurl which is related to nftmetadata
+
+ERCVaultfactory.sol = this is the parent contract of our fractionalizing nft concept which help us track the record of our all nfts which are fractionalised for erc20 token with a function named mint() responsible for fractionalization of nfts.
+
+ERCTokenvault.sol = this is the core logic contract which store the fees part and buying of fractional token. this contract the fractionised token and is responsible for collecting the funds and regulation of the fractionalised erc20 funds of particular token id.Also this contract contain getquoteoftoken function from where we are getting the price of tokens through the help of router contract.
+
+
+npx hardhat --verbose flatten contracts/NFT.sol > nft.sol
+npx hardhat --verbose flatten contracts/ERC721VaultFactory.sol > factory.sol
