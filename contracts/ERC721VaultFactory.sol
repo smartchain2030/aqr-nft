@@ -13,6 +13,8 @@ contract ERC721VaultFactory is Ownable {
 
   mapping(uint256 => address) public NftToToken;
 
+  mapping(string => uint256) public propIdTopropTokenId;
+
   event Mint(
     address indexed token,
     uint256 id,
@@ -36,7 +38,7 @@ contract ERC721VaultFactory is Ownable {
     uint256 _id,
     uint256 _supply,
     uint256 _listPrice, // in 18 decimals
-    uint256 _fee
+    string memory _propid
   ) external returns (uint256) {
     require(NftToToken[_id] == address(0));
  
@@ -46,7 +48,7 @@ contract ERC721VaultFactory is Ownable {
       _id,
       _supply,
       _listPrice,
-      _fee,
+      _propid,
       _name,
       _symbol
     );
@@ -55,15 +57,17 @@ contract ERC721VaultFactory is Ownable {
 
     vault.transferOwnership(msg.sender);
 
-    dividingFunction(address(vault), _id, _token);
+    dividingFunction(address(vault), _id, _token,_propid);
     // return vaultCount - 1;
     emit Mint(_token, _id, _listPrice, address(vault), vaultCount);
 
   }
 
 
-  function dividingFunction(address vault,uint256 _id, address _token) internal{
+  function dividingFunction(address vault,uint256 _id, address _token,string memory propid) internal{
+
     NftToToken[_id] = vault;
+    propIdTopropTokenId[propid] = _id;
 
     IERC721(_token).safeTransferFrom(msg.sender, vault, _id);
 
