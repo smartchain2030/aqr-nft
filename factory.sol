@@ -2,7 +2,7 @@
 
 // File @openzeppelin/contracts/utils/Context.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -30,7 +30,7 @@ abstract contract Context {
 
 // File @openzeppelin/contracts/access/Ownable.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -101,7 +101,7 @@ abstract contract Ownable is Context {
 
 // File @openzeppelin/contracts/math/SafeMath.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -319,7 +319,7 @@ library SafeMath {
 
 // File @openzeppelin/contracts/introspection/IERC165.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -347,7 +347,7 @@ interface IERC165 {
 
 // File @openzeppelin/contracts/token/ERC721/IERC721.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.2 <0.8.0;
 
@@ -478,7 +478,7 @@ interface IERC721 is IERC165 {
 
 // File @openzeppelin/contracts/token/ERC721/IERC721Metadata.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.2 <0.8.0;
 
@@ -507,7 +507,7 @@ interface IERC721Metadata is IERC721 {
 
 // File @openzeppelin/contracts/token/ERC721/IERC721Enumerable.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.2 <0.8.0;
 
@@ -538,7 +538,7 @@ interface IERC721Enumerable is IERC721 {
 
 // File @openzeppelin/contracts/token/ERC721/IERC721Receiver.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -563,7 +563,7 @@ interface IERC721Receiver {
 
 // File @openzeppelin/contracts/introspection/ERC165.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -619,7 +619,7 @@ abstract contract ERC165 is IERC165 {
 
 // File @openzeppelin/contracts/utils/Address.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.2 <0.8.0;
 
@@ -812,7 +812,7 @@ library Address {
 
 // File @openzeppelin/contracts/utils/EnumerableSet.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -1113,7 +1113,7 @@ library EnumerableSet {
 
 // File @openzeppelin/contracts/utils/EnumerableMap.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -1383,7 +1383,7 @@ library EnumerableMap {
 
 // File @openzeppelin/contracts/utils/Strings.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -1421,7 +1421,7 @@ library Strings {
 
 // File @openzeppelin/contracts/token/ERC721/ERC721.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -1901,7 +1901,7 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerable 
 
 // File @openzeppelin/contracts/token/ERC20/IERC20.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -1982,7 +1982,7 @@ interface IERC20 {
 
 // File @openzeppelin/contracts/token/ERC20/ERC20.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -2290,7 +2290,7 @@ contract ERC20 is Context, IERC20 {
 
 // File @openzeppelin/contracts/token/ERC721/ERC721Holder.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -2534,7 +2534,7 @@ interface IUniswapV2Pair {
 
 // File @openzeppelin/contracts/utils/ReentrancyGuard.sol@v3.4.2
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -2600,7 +2600,7 @@ abstract contract ReentrancyGuard {
 
 // File contracts/ERC721TokenVault.sol
 
-
+//SPDX-License-Identifier: MIT
 pragma solidity ^0.7.6;
 
 
@@ -2738,7 +2738,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
         tokenPrice()
       );
       IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-      claimableBalance[msg.sender] =  totalTokenReceived;
+      claimableBalance[msg.sender] +=  totalTokenReceived;
        
     } 
   }
@@ -2755,7 +2755,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     uint256 totalCrypto = (
       (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
     );
-      claimableBalance[msg.sender] =  totalCrypto;
+      claimableBalance[msg.sender] +=  totalCrypto;
   }
 
   function buyFromBtc(uint256 _amount) external {
@@ -2769,10 +2769,10 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     uint256 totalCrypto = (
       (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
     );
-     claimableBalance[msg.sender] =  totalCrypto;
+     claimableBalance[msg.sender] +=  totalCrypto;
   }
 
-  function buyFromMatic(address _token, uint256 _amount) external payable {
+  function buyFromMatic( uint256 _amount) external payable {
     require(msg.value == _amount);
     require(_getNow() < endtime, "Crowdsale is ended");
     uint256 cryptoPrice = getQuoteToTokenAmount(
@@ -2784,7 +2784,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     uint256 totalCrypto = (
       (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
     );
-    claimableBalance[msg.sender] =  totalCrypto;
+    claimableBalance[msg.sender] +=  totalCrypto;
   }
 
   function withdrawFunds(uint256 _amt,address admin) external nonReentrant onlyOwner {
@@ -2815,7 +2815,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
 
 // File contracts/ERC721VaultFactory.sol
 
-
+//SPDX-License-Identifier: MIT
 pragma solidity ^0.7.6;
 
 

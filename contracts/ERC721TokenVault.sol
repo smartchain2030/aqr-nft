@@ -138,7 +138,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
         tokenPrice()
       );
       IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-      claimableBalance[msg.sender] =  totalTokenReceived;
+      claimableBalance[msg.sender] +=  totalTokenReceived;
        
     } 
   }
@@ -155,7 +155,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     uint256 totalCrypto = (
       (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
     );
-      claimableBalance[msg.sender] =  totalCrypto;
+      claimableBalance[msg.sender] +=  totalCrypto;
   }
 
   function buyFromBtc(uint256 _amount) external {
@@ -169,10 +169,10 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     uint256 totalCrypto = (
       (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
     );
-     claimableBalance[msg.sender] =  totalCrypto;
+     claimableBalance[msg.sender] +=  totalCrypto;
   }
 
-  function buyFromMatic(address _token, uint256 _amount) external payable {
+  function buyFromMatic( uint256 _amount) external payable {
     require(msg.value == _amount);
     require(_getNow() < endtime, "Crowdsale is ended");
     uint256 cryptoPrice = getQuoteToTokenAmount(
@@ -184,7 +184,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     uint256 totalCrypto = (
       (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
     );
-    claimableBalance[msg.sender] =  totalCrypto;
+    claimableBalance[msg.sender] +=  totalCrypto;
   }
 
   function withdrawFunds(uint256 _amt,address admin) external nonReentrant onlyOwner {
