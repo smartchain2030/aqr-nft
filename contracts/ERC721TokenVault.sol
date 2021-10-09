@@ -184,7 +184,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     uint256 totalCrypto = (
       (cryptoPrice.mul(msg.value).mul(1e18)).div(1e6).div(tokenPrice())
     );
-    claimableBalance[msg.sender] +=  totalCrypto;
+   claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
   }
 
   function withdrawFunds(uint256 _amt,address admin) external nonReentrant onlyOwner {
