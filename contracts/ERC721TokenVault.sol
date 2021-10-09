@@ -140,7 +140,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
       );
       doTransferIn(address(token), msg.sender, amount);
      claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalTokenReceived);
-       
+    }
        else{
           uint256 totalTokenReceived = _amount.mul(1e12).mul(1e18).div(
         tokenPrice()
@@ -148,7 +148,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
       IERC20(_token).transferFrom(msg.sender, address(this), _amount);
      claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalTokenReceived);
        }
-    } 
+    
   }
 
   function buyFromwhiteListCrypto(address _token, uint256 _amount) external {
@@ -207,6 +207,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     _token.transfer(msg.sender, _amt.mul(fee).div(1000));
     _token.transfer(admin, _amt.sub(_amt.mul(fee).div(1000)));
   }
+  
   function claimToken(uint256 _amt,address admin) external nonReentrant onlyOwner {
     require(claimableBalance[msg.sender] > 0,"Nothing to claim");
     require(endtime < _getNow(),"Time not finished yet");
@@ -297,4 +298,4 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
         require(success, "TOKEN_TRANSFER_OUT_FAILED");
     }
 }
-}
+
