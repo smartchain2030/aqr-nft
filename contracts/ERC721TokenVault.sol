@@ -196,11 +196,14 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
   }
 
   function withdrawFunds(address _token,uint256 _amt,address admin) external nonReentrant onlyOwner {
+    
     require(_amt <= balanceOf(address(this)));
+
     if (_token == usdt) {
            doTransferOut(address(_token), admin, _amt.mul(fee).div(1000));
            doTransferOut(address(_token), msg.sender, _amt.sub(_amt.mul(fee).div(1000)));
         }
+
     _token.transfer(admin, _amt.mul(fee).div(1000));
     _token.transfer(msg.sender, _amt.sub(_amt.mul(fee).div(1000)));
   }
