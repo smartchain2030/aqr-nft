@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interface/IUniswapRouter01.sol";
 import "./interface/IUniswapFactory.sol";
 import "./interface/IUniswapV2Pair.sol";
+import "./interface/INonStandardERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
@@ -132,14 +133,21 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
         _token == address(usdc)
     );
     require(_getNow() < endtime, "Crowdsale is ended");
-
-    if (_token == address(usdt) || _token == address(usdc)) {
+  
+    if (_token == address(usdt) ) {
       uint256 totalTokenReceived = _amount.mul(1e12).mul(1e18).div(
+        tokenPrice()
+      );
+      doTransferIn(address(token), msg.sender, amount);
+     claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalTokenReceived);
+       
+       else{
+          uint256 totalTokenReceived = _amount.mul(1e12).mul(1e18).div(
         tokenPrice()
       );
       IERC20(_token).transferFrom(msg.sender, address(this), _amount);
      claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalTokenReceived);
-       
+       }
     } 
   }
 
@@ -187,10 +195,14 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
    claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
   }
 
-  function withdrawFunds(uint256 _amt,address admin) external nonReentrant onlyOwner {
+  function withdrawFunds(address _token,uint256 _amt,address admin) external nonReentrant onlyOwner {
     require(_amt <= balanceOf(address(this)));
-    transfer(admin, _amt.mul(fee).div(1000));
-    transfer(msg.sender, _amt.sub(_amt.mul(fee).div(1000)));
+    if (_token == usdt) {
+           doTransferOut(address(_token), admin, _amt.mul(fee).div(1000));
+           doTransferOut(address(_token), msg.sender, _amt.sub(_amt.mul(fee).div(1000)));
+        }
+    _token.transfer(admin, _amt.mul(fee).div(1000));
+    _token.transfer(msg.sender, _amt.sub(_amt.mul(fee).div(1000)));
   }
   function claimToken(uint256 _amt,address admin) external nonReentrant onlyOwner {
     require(claimableBalance[msg.sender] > 0,"Nothing to claim");
@@ -210,4 +222,76 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
   function _getNow() public view returns (uint256) {
         return block.timestamp;
     }
+
+        function doTransferIn(
+        address tokenAddress,
+        address from,
+        uint256 amount
+    ) internal returns (uint256) {
+        INonStandardERC20 _token = INonStandardERC20(tokenAddress);
+        uint256 balanceBefore = IERC20(tokenAddress).balanceOf(address(this));
+        _token.transferFrom(from, address(this), amount);
+
+        bool success;
+        assembly {
+            switch returndatasize()
+                case 0 {
+                    // This is a non-standard ERC-20
+                    success := not(0) // set success to true
+                }
+                case 32 {
+                    // This is a compliant ERC-20
+                    returndatacopy(0, 0, 32)
+                    success := mload(0) // Set `success = returndata` of external call
+                }
+                default {
+                    // This is an excessively non-compliant ERC-20, revert.
+                    revert(0, 0)
+                }
+        }
+        require(success, "TOKEN_TRANSFER_IN_FAILED");
+
+        // Calculate the amount that was actually transferred
+        uint256 balanceAfter = IERC20(tokenAddress).balanceOf(address(this));
+        require(balanceAfter >= balanceBefore, "TOKEN_TRANSFER_IN_OVERFLOW");
+        return balanceAfter.sub(balanceBefore); // underflow already checked above, just subtract
+    }
+
+    /**
+     * @dev Similar to EIP20 transfer, except it handles a False success from `transfer` and returns an explanatory
+     *      error code rather than reverting. If caller has not called checked protocol's balance, this may revert due to
+     *      insufficient cash held in this contract. If caller has checked protocol's balance prior to this call, and verified
+     *      it is >= amount, this should not revert in normal conditions.
+     *
+     *      Note: This wrapper safely handles non-standard ERC-20 tokens that do not return a value.
+     *            See here: https://medium.com/coinmonks/missing-return-value-bug-at-least-130-tokens-affected-d67bf08521ca
+     */
+    function doTransferOut(
+        address tokenAddress,
+        address to,
+        uint256 amount
+    ) internal {
+        INonStandardERC20 _token = INonStandardERC20(tokenAddress);
+        _token.transfer(to, amount);
+
+        bool success;
+        assembly {
+            switch returndatasize()
+                case 0 {
+                    // This is a non-standard ERC-20
+                    success := not(0) // set success to true
+                }
+                case 32 {
+                    // This is a complaint ERC-20
+                    returndatacopy(0, 0, 32)
+                    success := mload(0) // Set `success = returndata` of external call
+                }
+                default {
+                    // This is an excessively non-compliant ERC-20, revert.
+                    revert(0, 0)
+                }
+        }
+        require(success, "TOKEN_TRANSFER_OUT_FAILED");
+    }
+}
 }
