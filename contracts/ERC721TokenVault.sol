@@ -138,7 +138,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
         tokenPrice()
       );
       IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-      claimableBalance[msg.sender] +=  totalTokenReceived;
+     claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalTokenReceived);
        
     } 
   }
@@ -155,7 +155,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     uint256 totalCrypto = (
       (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
     );
-      claimableBalance[msg.sender] +=  totalCrypto;
+       claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
   }
 
   function buyFromBtc(uint256 _amount) external {
@@ -169,10 +169,10 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     uint256 totalCrypto = (
       (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
     );
-     claimableBalance[msg.sender] +=  totalCrypto;
+     claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
   }
 
-  function buyFromMatic( uint256 _amount) external payable {
+  function buyFromMatic() external payable {
     require(msg.value == _amount);
     require(_getNow() < endtime, "Crowdsale is ended");
     uint256 cryptoPrice = getQuoteToTokenAmount(
@@ -180,9 +180,9 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
       address(WMATIC),
       address(usdt)
     );
-    require(_getNow() >= endtime, "Crowdsale is ended");
+   
     uint256 totalCrypto = (
-      (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
+      (cryptoPrice.mul(msg.value).mul(1e18)).div(1e6).div(tokenPrice())
     );
     claimableBalance[msg.sender] +=  totalCrypto;
   }
@@ -207,7 +207,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
         msg.sender.transfer(address(this).balance);
     }
 
-  function _getNow() internal view returns (uint256) {
+  function _getNow() public view returns (uint256) {
         return block.timestamp;
     }
 }
