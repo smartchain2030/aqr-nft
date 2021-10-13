@@ -32,6 +32,8 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
   /// @notice the fee paid to the curator for collecting property funds
   uint256 public fee = 200;
 
+    uint256 public userDiscount;
+
   IUniswapV2Router01 public QuickSwapRouter;
 
   uint256 public ListPrice;
@@ -45,6 +47,8 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
   uint256 public endtime;
 
   string propid;
+
+  uint256 availableBalance = totalSupply();
 
    mapping(address => uint256) public claimableBalance;
 
@@ -128,42 +132,94 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
 
   // amount of usdt to buy
   function buyTokenWithStableCoin(address _token, uint256 _amount) external {
+    require(availableBalance >= _amount.mul(1e12).mul(1e18).div(tokenPrice()),"available balance is less than your entered amount");
     require(
       _token == address(usdt) ||
         _token == address(usdc)
     );
     require(_getNow() < endtime, "Crowdsale is ended");
   
-    if (_token == address(usdt) ) {
+      uint256 totalTokenReceived = _amount.mul(1e12).mul(1e18).div(tokenPrice());
+     IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+     claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalTokenReceived);
+     availableBalance = availableBalance.sub(totalTokenReceived);
+
+  }
+    function buyOutTokenWithStableCoin(address _token, uint256 _amount) external {
+     require(availableBalance == totalSupply(),"property is already fractionalised now");
+    require(
+      _token == address(usdt) ||
+        _token == address(usdc)
+    );
+    require(_getNow() < endtime, "Crowdsale is ended");
+    require(_amount.mul(1e12).mul(1e18).div(tokenPrice()) >= ListPrice, "Not enough amount to buy out");
+
       uint256 totalTokenReceived = _amount.mul(1e12).mul(1e18).div(
         tokenPrice()
       );
-      doTransferIn(address(token), msg.sender, amount);
+     IERC20(_token).transferFrom(msg.sender, address(this), _amount);
      claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalTokenReceived);
-    }
-       else{
-          uint256 totalTokenReceived = _amount.mul(1e12).mul(1e18).div(
-        tokenPrice()
-      );
-      IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-     claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalTokenReceived);
-       }
-    
+     availableBalance = availableBalance.sub(totalTokenReceived);
+
   }
 
   function buyFromwhiteListCrypto(address _token, uint256 _amount) external {
-    require(_token == address(WETH) || _token == address(WXTZ) || _token == address(AQR));
-    require(_getNow() < endtime, "Crowdsale is ended");
     uint256 cryptoPrice = getQuoteToTokenAmount(
       1e18,
       address(_token),
       address(usdt)
     );
+    require(availableBalance >= cryptoPrice.mul(_amount).mul(1e18).div(1e6).div(tokenPrice()),"available balance is less than your entered amount");
+    require(_token == address(WETH) || _token == address(WXTZ) || _token == address(AQR));
+    require(_getNow() < endtime, "Crowdsale is ended");
+
+    if(_token == address(AQR)){
+    IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+    uint256 totalCrypto = (
+      (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
+    );
+    uint256 discount = userDiscount.div(1000).mul(totalCrypto);
+       claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto).add(discount);
+       availableBalance = availableBalance.sub(totalCrypto).sub(discount);
+    }
+    else{
     IERC20(_token).transferFrom(msg.sender, address(this), _amount);
     uint256 totalCrypto = (
       (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
     );
        claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
+       availableBalance = availableBalance.sub(totalCrypto);
+    }
+  }
+  function buyOutFromwhiteListCrypto(address _token, uint256 _amount) external {
+    uint256 cryptoPrice = getQuoteToTokenAmount(
+      1e18,
+      address(_token),
+      address(usdt)
+    );
+    require(availableBalance == totalSupply(),"property is already fractionalised now");
+    require(_token == address(WETH) || _token == address(WXTZ) || _token == address(AQR));
+    require(_getNow() < endtime, "Crowdsale is ended");
+
+    if(_token == address(AQR)){
+    require(cryptoPrice.mul(_amount).div(1e6) >= ListPrice, "Not enough amount to buy out");
+    IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+         uint256 totalCrypto = (
+      (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
+    );
+    uint256 discount = userDiscount.div(1000).mul(totalCrypto);
+       claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto).add(discount);
+       availableBalance = availableBalance.sub(totalCrypto).sub(discount);
+       }
+    else{
+      require(cryptoPrice.mul(_amount).div(1e6) >= ListPrice, "Not enough amount to buy out");
+      IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+    uint256 totalCrypto = (
+      (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
+    );
+       claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
+       availableBalance = availableBalance.sub(totalCrypto);
+    }
   }
 
   function buyFromBtc(uint256 _amount) external {
@@ -172,37 +228,71 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
       address(WBTC),
       address(usdt)
     );
+    require(availableBalance >= cryptoPrice.mul(_amount).mul(1e10).mul(1e18).div(1e6).div(tokenPrice()),"available balance is less than your entered amount");
     require(_getNow() < endtime, "Crowdsale is ended");
+
     IERC20(address(WBTC)).transferFrom(msg.sender, address(this), _amount);
     uint256 totalCrypto = (
-      (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
+      (cryptoPrice.mul(_amount).mul(1e10).mul(1e18)).div(1e6).div(tokenPrice())
     );
      claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
+     availableBalance = availableBalance.sub(totalCrypto);
   }
 
-  function buyFromMatic() external payable {
-    require(msg.value == _amount);
-    require(_getNow() < endtime, "Crowdsale is ended");
+  function buyOutFromBtc(uint256 _amount) external {
     uint256 cryptoPrice = getQuoteToTokenAmount(
+      1e8,
+      address(WBTC),
+      address(usdt)
+    );
+    require(availableBalance == totalSupply(),"property is already fractionalised now");
+    require(_getNow() < endtime, "Crowdsale is ended");
+    require(cryptoPrice.mul(_amount).div(1e6) >= ListPrice, "Not enough amount to buy out");
+
+    IERC20(address(WBTC)).transferFrom(msg.sender, address(this), _amount);
+    uint256 totalCrypto = (
+      (cryptoPrice.mul(_amount).mul(1e10).mul(1e18)).div(1e6).div(tokenPrice())
+    );
+     claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
+     availableBalance = availableBalance.sub(totalCrypto);
+  }
+
+  function buyFromMatic(uint256 _amount) external payable {
+     uint256 cryptoPrice = getQuoteToTokenAmount(
       1e18,
       address(WMATIC),
       address(usdt)
     );
+    require(availableBalance >= cryptoPrice.mul(msg.value).mul(1e18).div(1e6).div(tokenPrice()),"available balance is less than your entered amount");
+    require(msg.value == _amount);
+    require(_getNow() < endtime, "Crowdsale is ended");
    
     uint256 totalCrypto = (
       (cryptoPrice.mul(msg.value).mul(1e18)).div(1e6).div(tokenPrice())
     );
    claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
+   availableBalance = availableBalance.sub(totalCrypto);
+  }
+    function buyOutFromMatic() external payable {
+       uint256 cryptoPrice = getQuoteToTokenAmount(
+      1e18,
+      address(WMATIC),
+      address(usdt)
+    );
+    require(availableBalance == totalSupply(),"property is already fractionalised now");
+    require(_getNow() < endtime, "Crowdsale is ended");
+    require(cryptoPrice.mul(msg.value).div(1e6) >= ListPrice, "Not enough amount to buy out");
+   
+    uint256 totalCrypto = (
+      (cryptoPrice.mul(msg.value).mul(1e18)).div(1e6).div(tokenPrice())
+    );
+   claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
+   availableBalance = availableBalance.sub(totalCrypto);
   }
 
-  function withdrawFunds(address _token,uint256 _amt,address admin) external nonReentrant onlyOwner {
+  function withdrawFunds(IERC20 _token,uint256 _amt,address admin) external nonReentrant onlyOwner {
 
     require(_amt <= balanceOf(address(this)));
-
-    if (_token == usdt) {
-           doTransferOut(address(_token), msg.sender, _amt.mul(fee).div(1000));
-           doTransferOut(address(_token), admin, _amt.sub(_amt.mul(fee).div(1000)));
-        }
 
     _token.transfer(msg.sender, _amt.mul(fee).div(1000));
     _token.transfer(admin, _amt.sub(_amt.mul(fee).div(1000)));
@@ -227,75 +317,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
         return block.timestamp;
     }
 
-        function doTransferIn(
-        address tokenAddress,
-        address from,
-        uint256 amount
-    ) internal returns (uint256) {
-        INonStandardERC20 _token = INonStandardERC20(tokenAddress);
-        uint256 balanceBefore = IERC20(tokenAddress).balanceOf(address(this));
-        _token.transferFrom(from, address(this), amount);
 
-        bool success;
-        assembly {
-            switch returndatasize()
-                case 0 {
-                    // This is a non-standard ERC-20
-                    success := not(0) // set success to true
-                }
-                case 32 {
-                    // This is a compliant ERC-20
-                    returndatacopy(0, 0, 32)
-                    success := mload(0) // Set `success = returndata` of external call
-                }
-                default {
-                    // This is an excessively non-compliant ERC-20, revert.
-                    revert(0, 0)
-                }
-        }
-        require(success, "TOKEN_TRANSFER_IN_FAILED");
 
-        // Calculate the amount that was actually transferred
-        uint256 balanceAfter = IERC20(tokenAddress).balanceOf(address(this));
-        require(balanceAfter >= balanceBefore, "TOKEN_TRANSFER_IN_OVERFLOW");
-        return balanceAfter.sub(balanceBefore); // underflow already checked above, just subtract
-    }
-
-    /**
-     * @dev Similar to EIP20 transfer, except it handles a False success from `transfer` and returns an explanatory
-     *      error code rather than reverting. If caller has not called checked protocol's balance, this may revert due to
-     *      insufficient cash held in this contract. If caller has checked protocol's balance prior to this call, and verified
-     *      it is >= amount, this should not revert in normal conditions.
-     *
-     *      Note: This wrapper safely handles non-standard ERC-20 tokens that do not return a value.
-     *            See here: https://medium.com/coinmonks/missing-return-value-bug-at-least-130-tokens-affected-d67bf08521ca
-     */
-    function doTransferOut(
-        address tokenAddress,
-        address to,
-        uint256 amount
-    ) internal {
-        INonStandardERC20 _token = INonStandardERC20(tokenAddress);
-        _token.transfer(to, amount);
-
-        bool success;
-        assembly {
-            switch returndatasize()
-                case 0 {
-                    // This is a non-standard ERC-20
-                    success := not(0) // set success to true
-                }
-                case 32 {
-                    // This is a complaint ERC-20
-                    returndatacopy(0, 0, 32)
-                    success := mload(0) // Set `success = returndata` of external call
-                }
-                default {
-                    // This is an excessively non-compliant ERC-20, revert.
-                    revert(0, 0)
-                }
-        }
-        require(success, "TOKEN_TRANSFER_OUT_FAILED");
-    }
 }
 
