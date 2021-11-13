@@ -139,7 +139,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
         _token == address(usdc)
     );
     require(_getNow() < endtime, "Crowdsale is ended");
-    require((_amount).div(1e6) % 1 == 0,"not a one multiple");
+    require(_amount.mul(1e12).div(tokenPrice()) % 1 == 0,"not a one multiple");
   
       uint256 totalTokenReceived = _amount.mul(1e12).mul(1e18).div(tokenPrice());
      IERC20(_token).transferFrom(msg.sender, address(this), _amount);
@@ -157,7 +157,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     require(availableBalance >= cryptoPrice.mul(_amount).mul(1e18).div(1e6).div(tokenPrice()),"available balance is less than your entered amount");
     require(_token == address(WETH) || _token == address(AQR));
     require(_getNow() < endtime, "Crowdsale is ended");
-    require(cryptoPrice.mul(_amount).div(1e18).div(1e6) % 1 == 0,"not a one multiple");
+    require(cryptoPrice.mul(_amount).div(1e6).div(tokenPrice()) % 1 == 0,"not a one multiple");
 
     if(_token == address(AQR)){
     uint256 discount = userDiscount.div(1000).mul(_amount).div(10e18);
@@ -188,7 +188,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     );
     require(availableBalance >= cryptoPrice.mul(_amount).mul(1e10).mul(1e18).div(1e6).div(tokenPrice()),"available balance is less than your entered amount");
     require(_getNow() < endtime, "Crowdsale is ended");
-    require(cryptoPrice.mul(_amount).div(1e8).div(1e6) % 1 == 0,"not a one multiple");
+    require(cryptoPrice.mul(_amount).mul(1e10).div(1e6).div(tokenPrice() % 1 == 0,"not a one multiple");
 
     IERC20(address(WBTC)).transferFrom(msg.sender, address(this), _amount);
     uint256 totalCrypto = (
@@ -209,7 +209,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     require(availableBalance >= cryptoPrice.mul(msg.value).mul(1e18).div(1e6).div(tokenPrice()),"available balance is less than your entered amount");
     require(msg.value == _amount);
     require(_getNow() < endtime, "Crowdsale is ended");
-    require(cryptoPrice.mul(msg.value).div(1e18).div(1e6) % 1 == 0,"not a one multiple");
+    require(cryptoPrice.mul(msg.value).div(1e6).div(tokenPrice()) % 1 == 0,"not a one multiple");
    
     uint256 totalCrypto = (
       (cryptoPrice.mul(msg.value).mul(1e18)).div(1e6).div(tokenPrice())
