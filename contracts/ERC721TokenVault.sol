@@ -32,7 +32,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
   /// @notice the fee paid to the curator for collecting property funds
   uint256 public fee = 200;
 
-    uint256 public userDiscount;
+  uint256 public userDiscount;
 
   IUniswapV2Router01 public QuickSwapRouter;
 
@@ -48,7 +48,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
 
   string propid;
 
-  uint256 availableBalance = totalSupply();
+  uint256 public availableBalance;
 
    mapping(address => uint256) public claimableBalance;
 
@@ -73,6 +73,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
       0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
     );
     initialSupply = _supply;
+    availableBalance = _supply;
   }
 
   function changeAqarFee(uint256 _fee) external nonReentrant onlyOwner {
@@ -86,14 +87,14 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     initialized = true;
   }
 
-  IERC20 private usdt = IERC20(0x110a13FC3efE6A245B50102D2d79B3E76125Ae83);
-  IERC20 private usdc = IERC20(0x07865c6E87B9F70255377e024ace6630C1Eaa37F);
-  IERC20 private WXTZ = IERC20(0xA003362095Ef35B3FBa88C4854aD4548d3e90b85);
-  IERC20 private WBNB = IERC20(0xA003362095Ef35B3FBa88C4854aD4548d3e90b85);
-  IERC20 private WETH = IERC20(0xc778417E063141139Fce010982780140Aa0cD5Ab);
-  IERC20 private WBTC = IERC20(0xc4f00272451B19eCEE5eDb36Eff527D632b23b5B);
-  IERC20 private WMATIC = IERC20(0x1B48A5123F5d77dC89664B5f3b69218D3EA0A4ea);
-  IERC20 private AQR = IERC20(0x677BbF70a052C221cEe74C8Ca68c20719B58A226);
+  IERC20 private usdt = IERC20(0xc2132D05D31c914a87C6611C10748AEb04B58e8F);
+  IERC20 private usdc = IERC20(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174);
+//   IERC20 private WXTZ = IERC20(0xc3159137DaC99f59D7Ce16523af1dc345C1B5884);
+//   IERC20 private WBNB = IERC20(0x83EDF015E89fe41B59aD864fc00c772B64040CA5);
+  IERC20 private WETH = IERC20(0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619);
+  IERC20 private WBTC = IERC20(0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6);
+  IERC20 private WMATIC = IERC20(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
+  IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
 
   // IERC20 private aqar = IERC20();
   // IERC20 private wmatic = IERC20(0xc778417E063141139Fce010982780140Aa0cD5Ab);
@@ -138,6 +139,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
         _token == address(usdc)
     );
     require(_getNow() < endtime, "Crowdsale is ended");
+    require((_amount).div(1e6) % 1 == 0,"not a one multiple");
   
       uint256 totalTokenReceived = _amount.mul(1e12).mul(1e18).div(tokenPrice());
      IERC20(_token).transferFrom(msg.sender, address(this), _amount);
@@ -145,24 +147,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
      availableBalance = availableBalance.sub(totalTokenReceived);
 
   }
-    function buyOutTokenWithStableCoin(address _token, uint256 _amount) external {
-     require(availableBalance == totalSupply(),"property is already fractionalised now");
-    require(
-      _token == address(usdt) ||
-        _token == address(usdc)
-    );
-    require(_getNow() < endtime, "Crowdsale is ended");
-    require(_amount.mul(1e12).mul(1e18).div(tokenPrice()) >= ListPrice, "Not enough amount to buy out");
-
-      uint256 totalTokenReceived = _amount.mul(1e12).mul(1e18).div(
-        tokenPrice()
-      );
-     IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-     claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalTokenReceived);
-     availableBalance = availableBalance.sub(totalTokenReceived);
-
-  }
-
+    
   function buyFromwhiteListCrypto(address _token, uint256 _amount) external {
     uint256 cryptoPrice = getQuoteToTokenAmount(
       1e18,
@@ -170,17 +155,20 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
       address(usdt)
     );
     require(availableBalance >= cryptoPrice.mul(_amount).mul(1e18).div(1e6).div(tokenPrice()),"available balance is less than your entered amount");
-    require(_token == address(WETH) || _token == address(WXTZ) || _token == address(AQR));
+    require(_token == address(WETH) || _token == address(AQR));
     require(_getNow() < endtime, "Crowdsale is ended");
+    require(cryptoPrice.mul(_amount).div(1e18).div(1e6) % 1 == 0,"not a one multiple");
 
     if(_token == address(AQR)){
-    IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+    uint256 discount = userDiscount.div(1000).mul(_amount).div(10e18);
+    IERC20(_token).transferFrom(msg.sender, address(this), _amount.sub(discount));
+   
     uint256 totalCrypto = (
       (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
     );
-    uint256 discount = userDiscount.div(1000).mul(totalCrypto);
-       claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto).add(discount);
-       availableBalance = availableBalance.sub(totalCrypto).sub(discount);
+    
+       claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
+       availableBalance = availableBalance.sub(totalCrypto);
     }
     else{
     IERC20(_token).transferFrom(msg.sender, address(this), _amount);
@@ -191,37 +179,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
        availableBalance = availableBalance.sub(totalCrypto);
     }
   }
-  function buyOutFromwhiteListCrypto(address _token, uint256 _amount) external {
-    uint256 cryptoPrice = getQuoteToTokenAmount(
-      1e18,
-      address(_token),
-      address(usdt)
-    );
-    require(availableBalance == totalSupply(),"property is already fractionalised now");
-    require(_token == address(WETH) || _token == address(WXTZ) || _token == address(AQR));
-    require(_getNow() < endtime, "Crowdsale is ended");
-
-    if(_token == address(AQR)){
-    require(cryptoPrice.mul(_amount).div(1e6) >= ListPrice, "Not enough amount to buy out");
-    IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-         uint256 totalCrypto = (
-      (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
-    );
-    uint256 discount = userDiscount.div(1000).mul(totalCrypto);
-       claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto).add(discount);
-       availableBalance = availableBalance.sub(totalCrypto).sub(discount);
-       }
-    else{
-      require(cryptoPrice.mul(_amount).div(1e6) >= ListPrice, "Not enough amount to buy out");
-      IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-    uint256 totalCrypto = (
-      (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
-    );
-       claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
-       availableBalance = availableBalance.sub(totalCrypto);
-    }
-  }
-
+  
   function buyFromBtc(uint256 _amount) external {
     uint256 cryptoPrice = getQuoteToTokenAmount(
       1e8,
@@ -230,6 +188,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     );
     require(availableBalance >= cryptoPrice.mul(_amount).mul(1e10).mul(1e18).div(1e6).div(tokenPrice()),"available balance is less than your entered amount");
     require(_getNow() < endtime, "Crowdsale is ended");
+    require(cryptoPrice.mul(_amount).div(1e8).div(1e6) % 1 == 0,"not a one multiple");
 
     IERC20(address(WBTC)).transferFrom(msg.sender, address(this), _amount);
     uint256 totalCrypto = (
@@ -239,23 +198,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
      availableBalance = availableBalance.sub(totalCrypto);
   }
 
-  function buyOutFromBtc(uint256 _amount) external {
-    uint256 cryptoPrice = getQuoteToTokenAmount(
-      1e8,
-      address(WBTC),
-      address(usdt)
-    );
-    require(availableBalance == totalSupply(),"property is already fractionalised now");
-    require(_getNow() < endtime, "Crowdsale is ended");
-    require(cryptoPrice.mul(_amount).div(1e6) >= ListPrice, "Not enough amount to buy out");
 
-    IERC20(address(WBTC)).transferFrom(msg.sender, address(this), _amount);
-    uint256 totalCrypto = (
-      (cryptoPrice.mul(_amount).mul(1e10).mul(1e18)).div(1e6).div(tokenPrice())
-    );
-     claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
-     availableBalance = availableBalance.sub(totalCrypto);
-  }
 
   function buyFromMatic(uint256 _amount) external payable {
      uint256 cryptoPrice = getQuoteToTokenAmount(
@@ -266,6 +209,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     require(availableBalance >= cryptoPrice.mul(msg.value).mul(1e18).div(1e6).div(tokenPrice()),"available balance is less than your entered amount");
     require(msg.value == _amount);
     require(_getNow() < endtime, "Crowdsale is ended");
+    require(cryptoPrice.mul(msg.value).div(1e18).div(1e6) % 1 == 0,"not a one multiple");
    
     uint256 totalCrypto = (
       (cryptoPrice.mul(msg.value).mul(1e18)).div(1e6).div(tokenPrice())
@@ -273,22 +217,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
    claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
    availableBalance = availableBalance.sub(totalCrypto);
   }
-    function buyOutFromMatic() external payable {
-       uint256 cryptoPrice = getQuoteToTokenAmount(
-      1e18,
-      address(WMATIC),
-      address(usdt)
-    );
-    require(availableBalance == totalSupply(),"property is already fractionalised now");
-    require(_getNow() < endtime, "Crowdsale is ended");
-    require(cryptoPrice.mul(msg.value).div(1e6) >= ListPrice, "Not enough amount to buy out");
-   
-    uint256 totalCrypto = (
-      (cryptoPrice.mul(msg.value).mul(1e18)).div(1e6).div(tokenPrice())
-    );
-   claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
-   availableBalance = availableBalance.sub(totalCrypto);
-  }
+
 
   function withdrawFunds(IERC20 _token,uint256 _amt,address admin) external nonReentrant onlyOwner {
 
@@ -298,10 +227,10 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     _token.transfer(admin, _amt.sub(_amt.mul(fee).div(1000)));
   }
   
-  function claimToken(uint256 _amt,address admin) external nonReentrant onlyOwner {
+  function claimToken(IERC20 _token) external nonReentrant {
     require(claimableBalance[msg.sender] > 0,"Nothing to claim");
     require(endtime < _getNow(),"Time not finished yet");
-    transfer(msg.sender,claimableBalance[msg.sender]);
+    _token.transfer(msg.sender, claimableBalance[msg.sender]);
     claimableBalance[msg.sender] = 0;
   }
 

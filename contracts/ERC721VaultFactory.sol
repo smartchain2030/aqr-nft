@@ -39,7 +39,7 @@ contract ERC721VaultFactory is Ownable {
     uint256 _supply,
     uint256 _listPrice, // in 18 decimals
     string memory _propid
-  ) external returns (uint256) {
+  ) external onlyOwner returns (uint256) {
     require(NftToToken[_id] == address(0));
  
     TokenVault vault = new TokenVault(
