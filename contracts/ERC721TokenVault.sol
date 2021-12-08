@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interface/IUniswapRouter01.sol";
 import "./interface/IUniswapFactory.sol";
 import "./interface/IUniswapV2Pair.sol";
-import "./interface/INonStandardERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
@@ -85,7 +84,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     availableBalance = _supply;
   }
 
-  function changeAqarFee(uint256 _fee) external nonReentrant onlyOwner {
+  function changeAqarFee(uint256 _fee) external onlyOwner {
    fee = _fee;
   }
 
@@ -101,7 +100,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
   IERC20 private WETH = IERC20(0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619);
   IERC20 private WBTC = IERC20(0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6);
   IERC20 private WMATIC = IERC20(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
-IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
+  IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
 
   function tokenPrice() public view returns (uint256) {
     return (ListPrice.mul(1e18)).div(totalSupply());
@@ -145,9 +144,9 @@ IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
     require(_getNow() < endtime, "Crowdsale is ended");
     require(_amount.mul(1e12).div(tokenPrice()) % 1 == 0,"not a one multiple");
   
-      uint256 totalTokenReceived = _amount.mul(1e12).mul(1e18).div(tokenPrice());
+     uint256 totalTokenReceived = _amount.mul(1e12).mul(1e18).div(tokenPrice());
      IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-      userToToken[userid] = userToToken[userid].add(totalTokenReceived);
+     userToToken[userid] = userToToken[userid].add(totalTokenReceived);
      claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalTokenReceived);
      availableBalance = availableBalance.sub(totalTokenReceived);
       usersarr.push(msg.sender);
@@ -169,18 +168,10 @@ IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
     if(_token == address(AQR)){
     uint256 discount = userDiscount.div(1000).mul(_amount).div(10e18);
     IERC20(_token).transferFrom(msg.sender, address(this), _amount.sub(discount));
-   
-    uint256 totalCrypto = (
-      (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
-    );
-     userToToken[userid] = userToToken[userid].add(totalCrypto);
-       claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
-       availableBalance = availableBalance.sub(totalCrypto);
-       usersarr.push(msg.sender);
-        addReferral(referrer, totalCrypto);
     }
     else{
     IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+    }
     uint256 totalCrypto = (
       (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
     );
@@ -189,7 +180,6 @@ IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
        availableBalance = availableBalance.sub(totalCrypto);
        usersarr.push(msg.sender);
         addReferral(referrer, totalCrypto);
-    }
   }
   
   function buyFromBtc(uint256 _amount,string memory userid,address referrer) external {
@@ -245,7 +235,7 @@ IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
     _token.transfer(admin, _amt.sub(_amt.mul(fee).div(1000)));
   }
   
-  function claimToken(IERC20 _token) external nonReentrant {
+  function claimToken() external nonReentrant {
     require(claimableBalance[msg.sender] > 0,"Nothing to claim");
     require(endtime < _getNow(),"Time not finished yet");
     IERC20(address(this)).transfer(msg.sender, claimableBalance[msg.sender]);
