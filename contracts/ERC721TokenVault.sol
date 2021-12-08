@@ -235,7 +235,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     _token.transfer(admin, _amt.sub(_amt.mul(fee).div(1000)));
   }
   
-  function claimToken(IERC20 _token) external nonReentrant {
+  function claimToken() external nonReentrant {
     require(claimableBalance[msg.sender] > 0,"Nothing to claim");
     require(endtime < _getNow(),"Time not finished yet");
     IERC20(address(this)).transfer(msg.sender, claimableBalance[msg.sender]);
