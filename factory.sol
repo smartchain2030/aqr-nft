@@ -2703,6 +2703,11 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
    mapping(address => uint256) public claimableBalance;
    mapping(string => uint256) public userToToken;
 
+  // Referral system related variables
+  mapping(address => uint256) public _referrals;
+  mapping(uint256 => address) public _referrers;
+  uint256 public _referrersCount = 0;
+
   constructor(
     address _curator,
     address _token,
@@ -2778,7 +2783,7 @@ IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
   }
 
   // amount of usdt to buy
-  function buyTokenWithStableCoin(address _token, uint256 _amount,string memory userid) external {
+  function buyTokenWithStableCoin(address _token, uint256 _amount,string memory userid, address referrer) external {
     require(availableBalance >= _amount.mul(1e12).mul(1e18).div(tokenPrice()),"available balance is less than your entered amount");
     require(
       _token == address(usdt) ||
@@ -2793,10 +2798,11 @@ IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
      claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalTokenReceived);
      availableBalance = availableBalance.sub(totalTokenReceived);
       usersarr.push(msg.sender);
+      addReferral(referrer, totalTokenReceived);
 
   }
     
-  function buyFromwhiteListCrypto(address _token, uint256 _amount,string memory userid) external {
+  function buyFromwhiteListCrypto(address _token, uint256 _amount,string memory userid,address referrer) external {
     uint256 cryptoPrice = getQuoteToTokenAmount(
       1e18,
       address(_token),
@@ -2818,6 +2824,7 @@ IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
        claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
        availableBalance = availableBalance.sub(totalCrypto);
        usersarr.push(msg.sender);
+        addReferral(referrer, totalCrypto);
     }
     else{
     IERC20(_token).transferFrom(msg.sender, address(this), _amount);
@@ -2828,10 +2835,11 @@ IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
        claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
        availableBalance = availableBalance.sub(totalCrypto);
        usersarr.push(msg.sender);
+        addReferral(referrer, totalCrypto);
     }
   }
   
-  function buyFromBtc(uint256 _amount,string memory userid) external {
+  function buyFromBtc(uint256 _amount,string memory userid,address referrer) external {
     uint256 cryptoPrice = getQuoteToTokenAmount(
       1e8,
       address(WBTC),
@@ -2849,11 +2857,12 @@ IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
      claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
      availableBalance = availableBalance.sub(totalCrypto);
       usersarr.push(msg.sender);
+       addReferral(referrer, totalCrypto);
   }
 
 
 
-  function buyFromMatic(uint256 _amount,string memory userid) external payable {
+  function buyFromMatic(uint256 _amount,string memory userid,address referrer) external payable {
      uint256 cryptoPrice = getQuoteToTokenAmount(
       1e18,
       address(WMATIC),
@@ -2871,6 +2880,7 @@ IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
    claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
    availableBalance = availableBalance.sub(totalCrypto);
    usersarr.push(msg.sender);
+    addReferral(referrer, totalCrypto);
   }
 
 
@@ -2901,7 +2911,16 @@ IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
         return block.timestamp;
     }
 
-
+// Referral points calculation
+  function addReferral(address _referrer, uint256 _tokensCount) private {
+    if (_referrals[_referrer] == 0) {
+      _referrers[_referrersCount] = _referrer;
+      _referrersCount += 1;
+      // if referrer has never invited referrals, default bonus value is 0 in _referrals
+      // then adding referrer to referrers list to find them after and increment _referrersCount index by 1
+    }
+    _referrals[_referrer] += _tokensCount;
+  }
 
 }
 
