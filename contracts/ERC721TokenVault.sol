@@ -52,6 +52,8 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
   //all addresses
   address[] public usersarr;
 
+  bool public poolActivate = true;
+
    mapping(address => uint256) public claimableBalance;
    mapping(string => uint256) public userToToken;
 
@@ -100,7 +102,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
   IERC20 private WETH = IERC20(0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619);
   IERC20 private WBTC = IERC20(0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6);
   IERC20 private WMATIC = IERC20(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
-  IERC20 private AQR = IERC20(0x7467afa7C48132e8f8C90A919fC2ebA041207195);
+  IERC20 public AQR =  IERC20(0xaE204EE82E60829A5850FE291C10bF657AF1CF02);
 
   function tokenPrice() public view returns (uint256) {
     return (ListPrice.mul(1e18)).div(totalSupply());
@@ -109,7 +111,12 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     require(time > block.timestamp,"time be greater than now time");
     endtime = time;
   }
-
+  function activate(bool act) external onlyOwner{
+    poolActivate = act;
+  }
+ function addressAqr(address add) external onlyOwner{
+    AQR = IERC20(add);
+  } 
   function getQuoteToTokenAmount(
     uint256 _fromTokenAmount,
     address _fromTokenAddress,
@@ -136,22 +143,17 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
 
   // amount of usdt to buy
   function buyTokenWithStableCoin(address _token, uint256 _amount,string memory userid, address referrer) external {
-    require(availableBalance >= _amount.mul(1e12).mul(1e18).div(tokenPrice()),"available balance is less than your entered amount");
+    require(poolActivate,"pool not activated");
+    require(availableBalance >= _amount.mul(1e18),"available balance is less than your entered amount");
     require(
       _token == address(usdt) ||
         _token == address(usdc)
     );
     require(_getNow() < endtime, "Crowdsale is ended");
-    require(_amount.mul(1e12).div(tokenPrice()) % 1 == 0,"not a one multiple");
-  
-     uint256 totalTokenReceived = _amount.mul(1e12).mul(1e18).div(tokenPrice());
-     IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-     userToToken[userid] = userToToken[userid].add(totalTokenReceived);
-     claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalTokenReceived);
-     availableBalance = availableBalance.sub(totalTokenReceived);
-      usersarr.push(msg.sender);
-      addReferral(referrer, totalTokenReceived);
+    require(_amount % 1 == 0,"not a one multiple");
+    require(IERC20(_token).transferFrom(msg.sender, address(this),_amount.mul(tokenPrice()).mul(1e6)) ,"not enough balance");
 
+    addBalance(_amount,userid,referrer);
   }
     
   function buyFromwhiteListCrypto(address _token, uint256 _amount,string memory userid,address referrer) external {
@@ -160,26 +162,21 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
       address(_token),
       address(usdt)
     );
-    require(availableBalance >= cryptoPrice.mul(_amount).mul(1e18).div(1e6).div(tokenPrice()),"available balance is less than your entered amount");
+    require(poolActivate,"pool not activated");
+    require(availableBalance >= _amount.mul(1e18),"available balance is less than your entered amount");
     require(_token == address(WETH) || _token == address(AQR));
     require(_getNow() < endtime, "Crowdsale is ended");
-    require(cryptoPrice.mul(_amount).div(1e6).div(tokenPrice()) % 1 == 0,"not a one multiple");
-
+    require(_amount % 1 == 0,"not a one multiple");
+   
     if(_token == address(AQR)){
-    uint256 discount = userDiscount.div(1000).mul(_amount).div(10e18);
-    IERC20(_token).transferFrom(msg.sender, address(this), _amount.sub(discount));
+    uint256 discount = userDiscount.div(1000).mul(_amount).mul(1e18);
+    uint256 amount = _amount.mul(1e18).mul(tokenPrice());
+    require(IERC20(_token).transferFrom(msg.sender, address(this),amount.mul(1e6).div(cryptoPrice).sub(discount)) ,"not enough balance");
     }
     else{
-    IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+    require(IERC20(_token).transferFrom(msg.sender, address(this),_amount.mul(1e18).mul(tokenPrice()).mul(1e6).div(cryptoPrice)) ,"not enough balance");
     }
-    uint256 totalCrypto = (
-      (cryptoPrice.mul(_amount).mul(1e18)).div(1e6).div(tokenPrice())
-    );
-     userToToken[userid] = userToToken[userid].add(totalCrypto);
-       claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
-       availableBalance = availableBalance.sub(totalCrypto);
-       usersarr.push(msg.sender);
-        addReferral(referrer, totalCrypto);
+    addBalance(_amount,userid,referrer);
   }
   
   function buyFromBtc(uint256 _amount,string memory userid,address referrer) external {
@@ -188,19 +185,13 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
       address(WBTC),
       address(usdt)
     );
-    require(availableBalance >= cryptoPrice.mul(_amount).mul(1e10).mul(1e18).div(1e6).div(tokenPrice()),"available balance is less than your entered amount");
+    require(poolActivate,"pool not activated");
+    require(availableBalance >= _amount.mul(1e18),"available balance is less than your entered amount");
     require(_getNow() < endtime, "Crowdsale is ended");
-    require(cryptoPrice.mul(_amount).mul(1e10).div(1e6).div(tokenPrice()) % 1 == 0,"not a one multiple");
+    require(IERC20(address(WBTC)).transferFrom(msg.sender, address(this),_amount.mul(1e8).mul(tokenPrice()).mul(1e6).div(cryptoPrice)) ,"not enough balance");
+    require(_amount % 1 == 0,"not a one multiple");
 
-    IERC20(address(WBTC)).transferFrom(msg.sender, address(this), _amount);
-    uint256 totalCrypto = (
-      (cryptoPrice.mul(_amount).mul(1e10).mul(1e18)).div(1e6).div(tokenPrice())
-    );
-    userToToken[userid] = userToToken[userid].add(totalCrypto);
-     claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
-     availableBalance = availableBalance.sub(totalCrypto);
-      usersarr.push(msg.sender);
-       addReferral(referrer, totalCrypto);
+    addBalance(_amount,userid,referrer);
   }
 
 
@@ -211,21 +202,24 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
       address(WMATIC),
       address(usdt)
     );
-    require(availableBalance >= cryptoPrice.mul(msg.value).mul(1e18).div(1e6).div(tokenPrice()),"available balance is less than your entered amount");
-    require(msg.value == _amount);
+    require(poolActivate,"pool not activated");
+    require(availableBalance >= _amount.mul(1e18),"available balance is less than your entered amount");
     require(_getNow() < endtime, "Crowdsale is ended");
-    require(cryptoPrice.mul(msg.value).div(1e6).div(tokenPrice()) % 1 == 0,"not a one multiple");
+    require(_amount % 1 == 0,"not a one multiple");
+    require(msg.value == _amount.mul(1e18).mul(tokenPrice()).mul(1e6).div(cryptoPrice), "not enough balance");
    
-    uint256 totalCrypto = (
-      (cryptoPrice.mul(msg.value).mul(1e18)).div(1e6).div(tokenPrice())
-    );
-    userToToken[userid] = userToToken[userid].add(totalCrypto);
-   claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(totalCrypto);
-   availableBalance = availableBalance.sub(totalCrypto);
-   usersarr.push(msg.sender);
-    addReferral(referrer, totalCrypto);
+   addBalance(_amount,userid,referrer);
   }
 
+  function addBalance(uint256 _amount,string memory userid,address referrer) internal {
+
+    userToToken[userid] = userToToken[userid].add(_amount).mul(1e18);
+    claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(_amount.mul(1e18));
+    availableBalance = availableBalance.sub(_amount.mul(1e18));
+    usersarr.push(msg.sender);
+    addReferral(referrer, _amount.mul(1e18));
+
+  }
 
   function withdrawFunds(IERC20 _token,uint256 _amt,address admin) external nonReentrant onlyOwner {
 
@@ -233,6 +227,20 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
 
     _token.transfer(msg.sender, _amt.mul(fee).div(1000));
     _token.transfer(admin, _amt.sub(_amt.mul(fee).div(1000)));
+    
+  }
+    function withdrawNft(IERC721 _token,uint256 tokenid) external nonReentrant onlyOwner {
+
+    _token.transferFrom(address(this),msg.sender, tokenid);
+    
+  }
+
+  function allocating(uint256 _amount,address _beneficiery) external onlyOwner{
+
+    claimableBalance[_beneficiery] =  claimableBalance[_beneficiery].add(_amount.mul(1e18));
+    availableBalance = availableBalance.sub(_amount.mul(1e18));
+    usersarr.push(_beneficiery);
+
   }
   
   function claimToken() external nonReentrant {
@@ -242,20 +250,43 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     claimableBalance[msg.sender] = 0;
   }
 
- function updateListPrice(uint256 newlistprice)external onlyOwner {
-    ListPrice=newlistprice;
+   function claimRef() external nonReentrant {
+    require(_referrals[msg.sender] > 0,"Nothing to claim");
+
+    if(_referrals[msg.sender] < 15000){
+      IERC20(usdt).transfer(msg.sender, (_referrals[msg.sender]).div(100));
+      IERC20(AQR).transfer(msg.sender, (_referrals[msg.sender]).mul(5).div(1000));
+    }
+    else if(_referrals[msg.sender] > 15000 && _referrals[msg.sender] < 30000){
+      IERC20(usdt).transfer(msg.sender, (_referrals[msg.sender]).mul(2).div(100));
+      IERC20(AQR).transfer(msg.sender, (_referrals[msg.sender]).div(100));
+    }
+    else if(_referrals[msg.sender] > 30000 && _referrals[msg.sender] < 60000){
+      IERC20(usdt).transfer(msg.sender, (_referrals[msg.sender]).mul(25).div(1000));
+      IERC20(AQR).transfer(msg.sender, (_referrals[msg.sender]).mul(15).div(1000));
+    }
+    else if(_referrals[msg.sender] > 60000 ){
+      IERC20(usdt).transfer(msg.sender, (_referrals[msg.sender]).mul(3).div(100));
+      IERC20(AQR).transfer(msg.sender, (_referrals[msg.sender]).mul(2).div(100));
+    }
+
+    _referrals[msg.sender] = 0;
   }
+
+   function updateListPrice(uint256 newlistprice)external onlyOwner {
+    ListPrice=newlistprice;
+   }
   
    function adminTransferMaticFund() external onlyOwner {
         msg.sender.transfer(address(this).balance);
     }
 
-  function _getNow() public view returns (uint256) {
+   function _getNow() public view returns (uint256) {
         return block.timestamp;
     }
 
-// Referral points calculation
-  function addReferral(address _referrer, uint256 _tokensCount) private {
+    // Referral points calculation
+   function addReferral(address _referrer, uint256 _tokensCount) private {
     if (_referrals[_referrer] == 0) {
       _referrers[_referrersCount] = _referrer;
       _referrersCount += 1;
@@ -266,4 +297,3 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
   }
 
 }
-

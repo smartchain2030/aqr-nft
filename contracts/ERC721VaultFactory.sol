@@ -23,14 +23,7 @@ contract ERC721VaultFactory is Ownable {
     uint256 vaultId
   );
 
-  /// @notice the function to mint a new vault
-  /// @param _name the desired name of the vault
-  /// @param _symbol the desired sumbol of the vault
-  /// @param _token the ERC721 token address fo the NFT
-  /// @param _id the uint256 ID of the token
-  /// @param _listPrice the initial price of the NFT
-  /// @return the ID of the vault
-  // whenNotPaused
+
   function mint(
     string memory _name,
     string memory _symbol,
@@ -68,11 +61,10 @@ contract ERC721VaultFactory is Ownable {
 
     NftToToken[_id] = vault;
     propIdTopropTokenId[propid] = _id;
-
     IERC721(_token).safeTransferFrom(msg.sender, vault, _id);
-
     vaults[vaultCount] = vault;
     vaultCount++;
+
   }
 
 }
