@@ -217,7 +217,7 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
     claimableBalance[msg.sender] =  claimableBalance[msg.sender].add(_amount.mul(1e18));
     availableBalance = availableBalance.sub(_amount.mul(1e18));
     usersarr.push(msg.sender);
-    addReferral(referrer, _amount.mul(1e18));
+    addReferral(referrer, _amount);
 
   }
 
@@ -253,26 +253,25 @@ contract TokenVault is ERC20, ERC721Holder, Ownable, ReentrancyGuard {
    function claimRef() external nonReentrant {
     require(_referrals[msg.sender] > 0,"Nothing to claim");
 
-    if(_referrals[msg.sender] < 15000){
+    if(_referrals[msg.sender] < 50000){
       IERC20(usdt).transfer(msg.sender, (_referrals[msg.sender]).div(100));
       IERC20(AQR).transfer(msg.sender, (_referrals[msg.sender]).mul(5).div(1000));
     }
-    else if(_referrals[msg.sender] > 15000 && _referrals[msg.sender] < 30000){
+    else if(_referrals[msg.sender] > 50000 && _referrals[msg.sender] <= 100000){
       IERC20(usdt).transfer(msg.sender, (_referrals[msg.sender]).mul(2).div(100));
       IERC20(AQR).transfer(msg.sender, (_referrals[msg.sender]).div(100));
     }
-    else if(_referrals[msg.sender] > 30000 && _referrals[msg.sender] < 60000){
+    else if(_referrals[msg.sender] >= 100001 && _referrals[msg.sender] < 250000){
       IERC20(usdt).transfer(msg.sender, (_referrals[msg.sender]).mul(25).div(1000));
       IERC20(AQR).transfer(msg.sender, (_referrals[msg.sender]).mul(15).div(1000));
     }
-    else if(_referrals[msg.sender] > 60000 ){
+    else if(_referrals[msg.sender] >= 250000 ){
       IERC20(usdt).transfer(msg.sender, (_referrals[msg.sender]).mul(3).div(100));
       IERC20(AQR).transfer(msg.sender, (_referrals[msg.sender]).mul(2).div(100));
     }
 
     _referrals[msg.sender] = 0;
   }
-
    function updateListPrice(uint256 newlistprice)external onlyOwner {
     ListPrice=newlistprice;
    }
